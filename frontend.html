@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Quantum Entanglement Simul ator</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #020b14;
+    --panel: #041220;
+    --border: #0a3a5c;
+    --cyan: #00e5ff;
+    --teal: #00bfa5;
+    --purple: #7c4dff;
+    --red: #ff1744;
+    --text: #b0d4e8;
+    --dim: #3a6a88;
+    --glow: 0 0 18px rgba(0,229,255,0.35);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Starfield ── */
+  #stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: white;
+    animation: twinkle var(--d, 3s) ease-in-out infinite alternate;
+    opacity: 0.15;
+  }
+  @keyframes twinkle { to { opacity: 0.7; } }
+
+  /* ── Layout ── */
+  .wrapper { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* ── Header ── */
+  header { text-align: center; margin-bottom: 2.5rem; }
+  .badge {
+    display: inline-block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    color: var(--cyan);
+    border: 1px solid var(--border);
+    padding: 0.3rem 1rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #fff;
+    line-height: 1.1;
+  }
+  h1 span { color: var(--cyan); }
+  .subtitle { font-size: 1rem; color: var(--dim); margin-top: 0.5rem; letter-spacing: 0.08em; }
+
+  /* ── Circuit Diagram ── */
+  .circuit-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .section-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  svg.circuit { width: 100%; max-width: 700px; display: block; margin: 0 auto; overflow: visible; }
+
+  /* ── Simulate Button ── */
+  .btn-wrap { text-align: center; margin-bottom: 2rem; }
+  button#simBtn {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--cyan);
+    border: none;
+    padding: 0.85rem 2.8rem;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    box-shadow: 0 0 22px rgba(0,229,255,0.5);
+  }
+  button#simBtn:hover { background: #40efff; box-shadow: 0 0 36px rgba(0,229,255,0.75); }
+  button#simBtn:active { transform: scale(0.97); }
+  button#simBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Steps ── */
+  #steps-container { display: none; }
+  .step-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-bottom: 1.2rem;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .step-card.visible { opacity: 1; transform: translateY(0); }
+  .step-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--cyan);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.6rem;
+  }
+  .state-vector {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.95rem;
+    color: #fff;
+    margin-bottom: 0.8rem;
+    word-break: break-all;
+  }
+  .step-desc {
+    font-size: 0.9rem;
+    color: var(--dim);
+    line-height: 1.5;
+    border-left: 2px solid var(--border);
+    padding-left: 0.8rem;
+  }
+
+  /* ── Probability Bars ── */
+  .prob-section { margin-top: 0.8rem; }
+  .prob-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.45rem; }
+  .prob-label { font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; color: var(--text); width: 42px; flex-shrink: 0; }
+  .prob-track { flex: 1; height: 10px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+  .prob-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--teal), var(--cyan));
+    border-radius: 2px;
+    width: 0;
+    transition: width 0.9s cubic-bezier(0.4,0,0.2,1);
+  }
+  .prob-pct { font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; color: var(--dim); width: 44px; text-align: right; }
+
+  /* ── Measurement Result ── */
+  #result-card {
+    background: var(--panel);
+    border: 1px solid var(--cyan);
+    border-radius: 6px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    display: none;
+    box-shadow: var(--glow);
+  }
+  #result-card .r-label { font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; margin-bottom: 0.6rem; }
+  #result-card .r-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 3.5rem;
+    color: var(--cyan);
+    text-shadow: 0 0 30px rgba(0,229,255,0.8);
+    animation: pulse 1.5s ease-in-out infinite alternate;
+  }
+  @keyframes pulse { to { text-shadow: 0 0 60px rgba(0,229,255,1); } }
+  #result-card .r-note { font-size: 0.9rem; color: var(--dim); margin-top: 0.8rem; }
+
+  /* ── Entanglement Note ── */
+  #entangle-note {
+    background: rgba(124,77,255,0.08);
+    border: 1px solid rgba(124,77,255,0.3);
+    border-radius: 6px;
+    padding: 1rem 1.4rem;
+    font-size: 0.9rem;
+    color: #c8b0ff;
+    line-height: 1.6;
+    display: none;
+    margin-bottom: 1.5rem;
+  }
+  #entangle-note strong { color: #fff; }
+
+  /* ── Loader ── */
+  .loader { display: none; justify-content: center; align-items: center; gap: 6px; margin: 1rem 0; }
+  .loader.active { display: flex; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); animation: bounce 0.7s ease-in-out infinite alternate; }
+  .dot:nth-child(2) { animation-delay: 0.15s; }
+  .dot:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce { to { transform: translateY(-10px); opacity: 0.4; } }
+
+  /* ── Circuit Wire Animation ── */
+  .wire { stroke-dasharray: 300; stroke-dashoffset: 300; transition: stroke-dashoffset 0.8s ease; }
+  .wire.drawn { stroke-dashoffset: 0; }
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="wrapper">
+  <header>
+    <div class="badge">Pragati Engineering College · World Quantum Day 2026</div>
+    <h1>Quantum <span>Entanglement</span> Simulator</h1>
+    <p class="subtitle">Hadamard + CNOT Circuit · Bell State |Φ⁺⟩ · Wavefunction Collapse</p>
+  </header>
+
+  <!-- Circuit Diagram -->
+  <div class="circuit-card">
+    <div class="section-title">// Circuit Diagram</div>
+    <svg class="circuit" viewBox="0 0 640 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Qubit labels -->
+      <text x="10" y="60" fill="#b0d4e8" font-family="Share Tech Mono" font-size="13">q₁|0⟩</text>
+      <text x="10" y="110" fill="#b0d4e8" font-family="Share Tech Mono" font-size="13">q₂|0⟩</text>
+
+      <!-- Wires -->
+      <line class="wire" id="w1a" x1="72" y1="55" x2="200" y2="55" stroke="#0a3a5c" stroke-width="2"/>
+      <line class="wire" id="w1b" x1="240" y1="55" x2="380" y2="55" stroke="#0a3a5c" stroke-width="2"/>
+      <line class="wire" id="w1c" x1="380" y1="55" x2="600" y2="55" stroke="#0a3a5c" stroke-width="2"/>
+      <line class="wire" id="w2a" x1="72" y1="105" x2="380" y2="105" stroke="#0a3a5c" stroke-width="2"/>
+      <line class="wire" id="w2b" x1="380" y1="105" x2="600" y2="105" stroke="#0a3a5c" stroke-width="2"/>
+
+      <!-- Hadamard gate -->
+      <rect x="200" y="38" width="40" height="34" rx="3" fill="#041220" stroke="#00bfa5" stroke-width="1.5"/>
+      <text x="220" y="60" fill="#00e5ff" font-family="Share Tech Mono" font-size="14" text-anchor="middle">H</text>
+
+      <!-- CNOT gate -->
+      <!-- Control dot -->
+      <circle cx="380" cy="55" r="6" fill="#00e5ff"/>
+      <!-- Vertical line -->
+      <line x1="380" y1="55" x2="380" y2="105" stroke="#00e5ff" stroke-width="2"/>
+      <!-- Target circle -->
+      <circle cx="380" cy="105" r="12" fill="#041220" stroke="#00e5ff" stroke-width="1.5"/>
+      <line x1="368" y1="105" x2="392" y2="105" stroke="#00e5ff" stroke-width="1.5"/>
+      <line x1="380" y1="93" x2="380" y2="117" stroke="#00e5ff" stroke-width="1.5"/>
+
+      <!-- Measurement boxes -->
+      <rect x="530" y="38" width="40" height="34" rx="3" fill="#041220" stroke="#7c4dff" stroke-width="1.5"/>
+      <text x="550" y="57" fill="#7c4dff" font-family="Share Tech Mono" font-size="11" text-anchor="middle">M</text>
+      <rect x="530" y="88" width="40" height="34" rx="3" fill="#041220" stroke="#7c4dff" stroke-width="1.5"/>
+      <text x="550" y="107" fill="#7c4dff" font-family="Share Tech Mono" font-size="11" text-anchor="middle">M</text>
+
+      <!-- Labels below -->
+      <text x="220" y="145" fill="#3a6a88" font-family="Share Tech Mono" font-size="10" text-anchor="middle">Hadamard</text>
+      <text x="380" y="145" fill="#3a6a88" font-family="Share Tech Mono" font-size="10" text-anchor="middle">CNOT</text>
+      <text x="550" y="145" fill="#3a6a88" font-family="Share Tech Mono" font-size="10" text-anchor="middle">Measure</text>
+    </svg>
+  </div>
+
+  <!-- Button -->
+  <div class="btn-wrap">
+    <button id="simBtn" onclick="runSim()">⚛ Run Simulation</button>
+  </div>
+
+  <!-- Loader -->
+  <div class="loader" id="loader">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  </div>
+
+  <!-- Steps -->
+  <div id="steps-container"></div>
+
+  <!-- Entanglement Note -->
+  <div id="entangle-note">
+    <strong>🔗 Entanglement Explained (Network Analogy):</strong><br>
+    After the CNOT gate, both qubits are in a <strong>Bell State |Φ⁺⟩</strong>. 
+    Measuring one instantly determines the other — no matter the distance. 
+    This mirrors how two <strong>BGP peers with synchronized tables</strong> always reflect each other's state. 
+    Notice the result is always <strong>|00⟩ or |11⟩</strong> — never |01⟩ or |10⟩. That's quantum correlation.
+  </div>
+
+  <!-- Result -->
+  <div id="result-card">
+    <div class="r-label">// Wavefunction Collapsed → Measurement Result</div>
+    <div class="r-value" id="resultVal"></div>
+    <div class="r-note">Run again to observe quantum randomness — always correlated, never mixed.</div>
+  </div>
+
+</div>
+
+<script>
+// ── Starfield ──────────────────────────────────────────────
+const canvas = document.getElementById('stars');
+const ctx = canvas.getContext('2d');
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+const stars = Array.from({length: 140}, () => ({
+  x: Math.random(), y: Math.random(),
+  r: Math.random() * 1.2 + 0.2,
+  speed: Math.random() * 0.0003 + 0.0001
+}));
+let t = 0;
+function drawStars() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  stars.forEach(s => {
+    const op = 0.1 + 0.5 * Math.abs(Math.sin(t * s.speed * 1000));
+    ctx.beginPath();
+    ctx.arc(s.x * canvas.width, s.y * canvas.height, s.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(180,220,255,${op})`;
+    ctx.fill();
+  });
+  t += 0.016;
+  requestAnimationFrame(drawStars);
+}
+drawStars();
+
+// ── Draw circuit wires on load ──────────────────────────────
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.querySelectorAll('.wire').forEach((w,i) => {
+      setTimeout(() => w.classList.add('drawn'), i * 100);
+    });
+  }, 300);
+});
+
+// ── Simulation ─────────────────────────────────────────────
+async function runSim() {
+  const btn = document.getElementById('simBtn');
+  const loader = document.getElementById('loader');
+  btn.disabled = true;
+  loader.classList.add('active');
+
+  document.getElementById('steps-container').style.display = 'none';
+  document.getElementById('result-card').style.display = 'none';
+  document.getElementById('entangle-note').style.display = 'none';
+  document.getElementById('steps-container').innerHTML = '';
+
+  try {
+    const res = await fetch('/simulate');
+    const data = await res.json();
+
+    loader.classList.remove('active');
+    btn.disabled = false;
+
+    const container = document.getElementById('steps-container');
+    container.style.display = 'block';
+
+    // Render each step with delay
+    data.steps.forEach((step, idx) => {
+      setTimeout(() => {
+        const card = document.createElement('div');
+        card.className = 'step-card';
+        card.innerHTML = `
+          <div class="step-label">${step.label}</div>
+          <div class="state-vector">State Vector: [${step.state.map(v => v.toFixed(4)).join(', ')}]</div>
+          <div class="prob-section">${
+            step.state.map((v, i) => {
+              const pct = (v*v * 100).toFixed(1);
+              return `<div class="prob-row">
+                <span class="prob-label">${step.labels[i]}</span>
+                <div class="prob-track"><div class="prob-fill" data-pct="${pct}" style="width:0%"></div></div>
+                <span class="prob-pct">${pct}%</span>
+              </div>`;
+            }).join('')
+          }</div>
+          <div class="step-desc">${step.description}</div>
+        `;
+        container.appendChild(card);
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            card.classList.add('visible');
+            card.querySelectorAll('.prob-fill').forEach(bar => {
+              bar.style.width = bar.dataset.pct + '%';
+            });
+          }, 50);
+        });
+      }, idx * 600);
+    });
+
+    // Show entanglement note + result after all steps
+    const totalDelay = data.steps.length * 600 + 400;
+    setTimeout(() => {
+      const note = document.getElementById('entangle-note');
+      note.style.display = 'block';
+    }, totalDelay);
+
+    setTimeout(() => {
+      const rc = document.getElementById('result-card');
+      document.getElementById('resultVal').textContent = data.measurement;
+      rc.style.display = 'block';
+    }, totalDelay + 300);
+
+  } catch(e) {
+    loader.classList.remove('active');
+    btn.disabled = false;
+    alert('Error running simulation. Make sure Flask server is running.');
+  }
+}
+</script>
+</body>
+</html>
